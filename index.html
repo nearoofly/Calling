@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appel Téléphonique</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+    <title>Simulation d'Appel</title>
     <style>
         body {
             background: black;
@@ -50,49 +49,45 @@
         <button class="btn decline" id="declineBtn" style="display:none;">❌ Rejeter</button>
     </div>
 
+    <audio id="ringtone" src="https://cdn.pixabay.com/download/audio/2023/08/07/audio_d864d0b418.mp3?filename=iphone-ringtone-13948.mp3" loop></audio>
+    <audio id="callSound" src="https://www.soundjay.com/button/beep-07.wav" loop></audio>
+    <audio id="endCall" src="https://www.soundjay.com/button/button-3.mp3"></audio>
+
     <script>
-        // Initialisation des sons avec Howler.js
-        let ringtone = new Howl({
-            src: ["https://cdn.pixabay.com/download/audio/2023/08/07/audio_d864d0b418.mp3?filename=iphone-ringtone-13948.mp3"],
-            loop: true,
-            volume: 1.0
-        });
-
-        let callSound = new Howl({
-            src: ["https://www.soundjay.com/button/beep-07.wav"],
-            loop: true,
-            volume: 1.0
-        });
-
-        let endCall = new Howl({
-            src: ["https://www.soundjay.com/button/button-3.mp3"],
-            volume: 1.0
-        });
-
         let statusText = document.getElementById("status");
         let startCallBtn = document.getElementById("startCall");
         let answerBtn = document.getElementById("answerBtn");
         let declineBtn = document.getElementById("declineBtn");
 
+        let ringtone = document.getElementById("ringtone");
+        let callSound = document.getElementById("callSound");
+        let endCall = document.getElementById("endCall");
+
         function startCall() {
             statusText.textContent = "📲 Appel entrant...";
-            ringtone.play();
+            ringtone.play().catch(error => console.log("Lecture bloquée:", error));
+
             startCallBtn.style.display = "none";
             answerBtn.style.display = "inline-block";
             declineBtn.style.display = "inline-block";
         }
 
         function answerCall() {
-            ringtone.stop();
-            callSound.play();
+            ringtone.pause();
+            ringtone.currentTime = 0;
+
+            callSound.play().catch(error => console.log("Lecture bloquée:", error));
             statusText.textContent = "📞 En appel...";
             answerBtn.style.display = "none";
             declineBtn.textContent = "🔴 Raccrocher";
         }
 
         function declineCall() {
-            ringtone.stop();
-            callSound.stop();
+            ringtone.pause();
+            ringtone.currentTime = 0;
+            callSound.pause();
+            callSound.currentTime = 0;
+
             endCall.play();
             statusText.textContent = "📵 Appel terminé.";
             answerBtn.style.display = "none";
