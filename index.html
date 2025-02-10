@@ -49,23 +49,42 @@
         <button class="btn decline" id="declineBtn" style="display:none;">❌ Rejeter</button>
     </div>
 
-    <audio id="ringtone" src="https://cdn.pixabay.com/download/audio/2023/08/07/audio_d864d0b418.mp3?filename=iphone-ringtone-13948.mp3" loop></audio>
-    <audio id="callSound" src="https://www.soundjay.com/button/beep-07.wav" loop></audio>
-    <audio id="endCall" src="https://www.soundjay.com/button/button-3.mp3"></audio>
-
     <script>
         let statusText = document.getElementById("status");
         let startCallBtn = document.getElementById("startCall");
         let answerBtn = document.getElementById("answerBtn");
         let declineBtn = document.getElementById("declineBtn");
 
-        let ringtone = document.getElementById("ringtone");
-        let callSound = document.getElementById("callSound");
-        let endCall = document.getElementById("endCall");
+        let audioContext;
+        let ringtoneBuffer, callBuffer, endBuffer;
+        let ringtoneSource, callSource;
+
+        async function loadSounds() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            async function fetchAudio(url) {
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                return await audioContext.decodeAudioData(arrayBuffer);
+            }
+
+            ringtoneBuffer = await fetchAudio("https://cdn.pixabay.com/download/audio/2023/08/07/audio_d864d0b418.mp3?filename=iphone-ringtone-13948.mp3");
+            callBuffer = await fetchAudio("https://www.soundjay.com/button/beep-07.wav");
+            endBuffer = await fetchAudio("https://www.soundjay.com/button/button-3.mp3");
+        }
+
+        function playSound(buffer, loop = false) {
+            let source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.loop = loop;
+            source.connect(audioContext.destination);
+            source.start(0);
+            return source;
+        }
 
         function startCall() {
             statusText.textContent = "📲 Appel entrant...";
-            ringtone.play().catch(error => console.log("Lecture bloquée:", error));
+            ringtoneSource = playSound(ringtoneBuffer, true);
 
             startCallBtn.style.display = "none";
             answerBtn.style.display = "inline-block";
@@ -73,28 +92,26 @@
         }
 
         function answerCall() {
-            ringtone.pause();
-            ringtone.currentTime = 0;
-
-            callSound.play().catch(error => console.log("Lecture bloquée:", error));
+            ringtoneSource.stop();
+            callSource = playSound(callBuffer, true);
             statusText.textContent = "📞 En appel...";
             answerBtn.style.display = "none";
             declineBtn.textContent = "🔴 Raccrocher";
         }
 
         function declineCall() {
-            ringtone.pause();
-            ringtone.currentTime = 0;
-            callSound.pause();
-            callSound.currentTime = 0;
-
-            endCall.play();
+            if (ringtoneSource) ringtoneSource.stop();
+            if (callSource) callSource.stop();
+            playSound(endBuffer);
             statusText.textContent = "📵 Appel terminé.";
             answerBtn.style.display = "none";
             declineBtn.style.display = "none";
         }
 
-        startCallBtn.addEventListener("click", startCall);
+        startCallBtn.addEventListener("click", async () => {
+            if (!audioContext) await loadSounds();
+            startCall();
+        });
         answerBtn.addEventListener("click", answerCall);
         declineBtn.addEventListener("click", declineCall);
     </script>
