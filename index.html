@@ -10,9 +10,14 @@
             color: white;
             text-align: center;
             font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
         }
         .phone {
-            margin-top: 50px;
+            text-align: center;
         }
         .status {
             font-size: 20px;
@@ -26,6 +31,10 @@
             cursor: pointer;
             border-radius: 5px;
             margin: 10px;
+            transition: 0.3s;
+        }
+        .btn:hover {
+            transform: scale(1.1);
         }
         .answer {
             background: green;
@@ -34,6 +43,14 @@
         .decline {
             background: red;
             color: white;
+        }
+        @keyframes ring {
+            0% { transform: rotate(1deg); }
+            50% { transform: rotate(-1deg); }
+            100% { transform: rotate(1deg); }
+        }
+        .ringing {
+            animation: ring 0.2s infinite;
         }
     </style>
 </head>
@@ -46,8 +63,12 @@
         <div class="status" id="status">📲 En attente...</div>
         <button class="btn" id="startCall">📲 Démarrer l'appel</button>
         <button class="btn answer" id="answerBtn" style="display:none;">✅ Décrocher</button>
-        <button class="btn decline" id="declineBtn" style="display:none;">❌ Rejeter</button>
+        <button class="btn decline" id="declineBtn" style="display:none;">❌ Raccrocher</button>
     </div>
+
+    <audio id="ringtone" src="https://cdn.pixabay.com/download/audio/2023/08/07/audio_d864d0b418.mp3?filename=iphone-ringtone-13948.mp3" loop></audio>
+    <audio id="callSound" src="https://www.soundjay.com/button/beep-07.wav" loop></audio>
+    <audio id="endCall" src="https://www.soundjay.com/button/button-3.mp3"></audio>
 
     <script>
         let statusText = document.getElementById("status");
@@ -55,36 +76,21 @@
         let answerBtn = document.getElementById("answerBtn");
         let declineBtn = document.getElementById("declineBtn");
 
-        let audioContext;
-        let ringtoneBuffer, callBuffer, endBuffer;
-        let ringtoneSource, callSource;
+        let ringtone = document.getElementById("ringtone");
+        let callSound = document.getElementById("callSound");
+        let endCall = document.getElementById("endCall");
 
-        async function loadSounds() {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-            async function fetchAudio(url) {
-                const response = await fetch(url);
-                const arrayBuffer = await response.arrayBuffer();
-                return await audioContext.decodeAudioData(arrayBuffer);
+        function vibrate() {
+            if (navigator.vibrate) {
+                navigator.vibrate([500, 500, 500]); // Vibre trois fois
             }
-
-            ringtoneBuffer = await fetchAudio("https://cdn.pixabay.com/download/audio/2023/08/07/audio_d864d0b418.mp3?filename=iphone-ringtone-13948.mp3");
-            callBuffer = await fetchAudio("https://www.soundjay.com/button/beep-07.wav");
-            endBuffer = await fetchAudio("https://www.soundjay.com/button/button-3.mp3");
-        }
-
-        function playSound(buffer, loop = false) {
-            let source = audioContext.createBufferSource();
-            source.buffer = buffer;
-            source.loop = loop;
-            source.connect(audioContext.destination);
-            source.start(0);
-            return source;
         }
 
         function startCall() {
             statusText.textContent = "📲 Appel entrant...";
-            ringtoneSource = playSound(ringtoneBuffer, true);
+            document.body.classList.add("ringing");
+            ringtone.play();
+            vibrate();
 
             startCallBtn.style.display = "none";
             answerBtn.style.display = "inline-block";
@@ -92,26 +98,31 @@
         }
 
         function answerCall() {
-            ringtoneSource.stop();
-            callSource = playSound(callBuffer, true);
+            ringtone.pause();
+            ringtone.currentTime = 0;
+            document.body.classList.remove("ringing");
+
+            callSound.play();
             statusText.textContent = "📞 En appel...";
             answerBtn.style.display = "none";
             declineBtn.textContent = "🔴 Raccrocher";
         }
 
         function declineCall() {
-            if (ringtoneSource) ringtoneSource.stop();
-            if (callSource) callSource.stop();
-            playSound(endBuffer);
+            ringtone.pause();
+            ringtone.currentTime = 0;
+            callSound.pause();
+            callSound.currentTime = 0;
+            endCall.play();
+
+            document.body.classList.remove("ringing");
             statusText.textContent = "📵 Appel terminé.";
             answerBtn.style.display = "none";
             declineBtn.style.display = "none";
+            startCallBtn.style.display = "inline-block";
         }
 
-        startCallBtn.addEventListener("click", async () => {
-            if (!audioContext) await loadSounds();
-            startCall();
-        });
+        startCallBtn.addEventListener("click", startCall);
         answerBtn.addEventListener("click", answerCall);
         declineBtn.addEventListener("click", declineCall);
     </script>
