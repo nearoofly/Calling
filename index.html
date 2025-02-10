@@ -4,206 +4,104 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Appel Téléphonique</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
         body {
-            background: #222;
+            background: black;
             color: white;
             text-align: center;
-            padding: 20px;
+            font-family: Arial, sans-serif;
         }
-        h1 {
-            margin-bottom: 10px;
-        }
-        .phone-screen {
-            width: 320px;
-            height: 550px;
-            background: black;
-            border-radius: 20px;
-            margin: auto;
-            padding: 15px;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: relative;
+        .phone {
+            margin-top: 50px;
         }
         .status {
-            font-size: 18px;
+            font-size: 20px;
+            margin-bottom: 20px;
             color: #ffcc00;
-            display: none;
-            animation: blink 1s infinite;
-        }
-        @keyframes blink {
-            50% {
-                opacity: 0;
-            }
-        }
-        .conversation {
-            flex: 1;
-            overflow-y: auto;
-            text-align: left;
-            padding: 10px;
-            display: none;
-        }
-        .bubble {
-            max-width: 70%;
-            padding: 10px;
-            border-radius: 10px;
-            margin: 5px 0;
-            display: inline-block;
-        }
-        .incoming {
-            background: #444;
-            color: white;
-            align-self: flex-start;
-        }
-        .outgoing {
-            background: #4CAF50;
-            color: white;
-            align-self: flex-end;
-            text-align: right;
-        }
-        .button-container {
-            display: flex;
-            justify-content: space-around;
-            padding: 10px;
         }
         .btn {
-            padding: 15px 25px;
-            font-size: 16px;
+            padding: 15px 30px;
+            font-size: 18px;
             border: none;
             cursor: pointer;
-            border-radius: 50px;
-            width: 120px;
+            border-radius: 5px;
+            margin: 10px;
         }
-        .call-btn {
+        .answer {
             background: green;
             color: white;
-            display: none;
         }
-        .hangup-btn {
+        .decline {
             background: red;
-            color: white;
-            display: none;
-        }
-        .answer-btn {
-            background: limegreen;
-            color: white;
-        }
-        .decline-btn {
-            background: darkred;
             color: white;
         }
     </style>
 </head>
 <body>
 
-    <h1>📞 Simulateur d'Appel</h1>
-    <p>Un appel entrant... Décroche pour voir la conversation.</p>
-    
-    <div class="phone-screen">
-        <div class="status" id="status">📲 iPhone Appel entrant...</div>
-        <div class="conversation" id="conversation"></div>
-        <div class="button-container">
-            <button class="btn answer-btn" id="answerBtn">✅ Décrocher</button>
-            <button class="btn decline-btn" id="declineBtn">❌ Rejeter</button>
-            <button class="btn hangup-btn" id="hangupBtn">🔴 Raccrocher</button>
-        </div>
+    <h1>📞 Simulation d'Appel</h1>
+    <p>Appuie sur "Démarrer l'appel" pour commencer.</p>
+
+    <div class="phone">
+        <div class="status" id="status">📲 En attente...</div>
+        <button class="btn" id="startCall">📲 Démarrer l'appel</button>
+        <button class="btn answer" id="answerBtn" style="display:none;">✅ Décrocher</button>
+        <button class="btn decline" id="declineBtn" style="display:none;">❌ Rejeter</button>
     </div>
 
-    <!-- Audio -->
-    <audio id="ringtone" src="https://cdn.pixabay.com/download/audio/2023/08/07/audio_d864d0b418.mp3?filename=iphone-ringtone-13948.mp3" loop></audio>
-    <audio id="callSound" src="https://www.soundjay.com/button/beep-07.wav" loop></audio>
-    <audio id="endCall" src="https://www.soundjay.com/button/button-3.mp3"></audio>
-
     <script>
-        const ringtone = document.getElementById("ringtone");
-        const callSound = document.getElementById("callSound");
-        const endCall = document.getElementById("endCall");
+        // Initialisation des sons avec Howler.js
+        let ringtone = new Howl({
+            src: ["https://cdn.pixabay.com/download/audio/2023/08/07/audio_d864d0b418.mp3?filename=iphone-ringtone-13948.mp3"],
+            loop: true,
+            volume: 1.0
+        });
 
-        const answerBtn = document.getElementById("answerBtn");
-        const declineBtn = document.getElementById("declineBtn");
-        const hangupBtn = document.getElementById("hangupBtn");
+        let callSound = new Howl({
+            src: ["https://www.soundjay.com/button/beep-07.wav"],
+            loop: true,
+            volume: 1.0
+        });
 
-        const statusText = document.getElementById("status");
-        const conversationDiv = document.getElementById("conversation");
+        let endCall = new Howl({
+            src: ["https://www.soundjay.com/button/button-3.mp3"],
+            volume: 1.0
+        });
 
-        const messages = [
-            { type: "incoming", text: "Salut ! T'es dispo ?" },
-            { type: "outgoing", text: "Oui, qu'est-ce qu'il y a ?" },
-            { type: "incoming", text: "Je voulais te parler du projet..." },
-            { type: "outgoing", text: "Ah, bien sûr ! Dis-moi tout." },
-            { type: "incoming", text: "On pourra se voir demain pour finaliser ?" },
-            { type: "outgoing", text: "Oui, parfait ! À demain." }
-        ];
+        let statusText = document.getElementById("status");
+        let startCallBtn = document.getElementById("startCall");
+        let answerBtn = document.getElementById("answerBtn");
+        let declineBtn = document.getElementById("declineBtn");
 
         function startCall() {
-            statusText.style.display = "block";
+            statusText.textContent = "📲 Appel entrant...";
             ringtone.play();
+            startCallBtn.style.display = "none";
+            answerBtn.style.display = "inline-block";
+            declineBtn.style.display = "inline-block";
         }
 
         function answerCall() {
-            ringtone.pause();
-            ringtone.currentTime = 0;
-            statusText.style.display = "none";
-            conversationDiv.style.display = "block";
-            answerBtn.style.display = "none";
-            declineBtn.style.display = "none";
-            hangupBtn.style.display = "inline-block";
+            ringtone.stop();
             callSound.play();
-            startConversation();
+            statusText.textContent = "📞 En appel...";
+            answerBtn.style.display = "none";
+            declineBtn.textContent = "🔴 Raccrocher";
         }
 
         function declineCall() {
-            ringtone.pause();
-            ringtone.currentTime = 0;
-            statusText.textContent = "📵 Appel refusé.";
-            statusText.style.color = "red";
+            ringtone.stop();
+            callSound.stop();
+            endCall.play();
+            statusText.textContent = "📵 Appel terminé.";
             answerBtn.style.display = "none";
             declineBtn.style.display = "none";
         }
 
-        function hangupCall() {
-            callSound.pause();
-            callSound.currentTime = 0;
-            endCall.play();
-            statusText.textContent = "📵 Appel terminé.";
-            statusText.style.color = "white";
-            hangupBtn.style.display = "none";
-        }
-
-        function startConversation() {
-            let index = 0;
-            conversationDiv.innerHTML = "";
-            
-            function addMessage() {
-                if (index < messages.length) {
-                    const msg = messages[index];
-                    const messageDiv = document.createElement("div");
-                    messageDiv.classList.add("bubble", msg.type);
-                    messageDiv.textContent = msg.text;
-                    conversationDiv.appendChild(messageDiv);
-                    conversationDiv.scrollTop = conversationDiv.scrollHeight;
-                    index++;
-                    setTimeout(addMessage, 2000);
-                }
-            }
-            
-            addMessage();
-        }
-
+        startCallBtn.addEventListener("click", startCall);
         answerBtn.addEventListener("click", answerCall);
         declineBtn.addEventListener("click", declineCall);
-        hangupBtn.addEventListener("click", hangupCall);
-
-        // Simuler un appel entrant après 2 secondes
-        setTimeout(startCall, 2000);
     </script>
 
 </body>
